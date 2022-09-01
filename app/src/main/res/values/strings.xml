@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">WeatherApp</string>
+    <string name="background_image">Background image</string>
+    <string name="use_location">Use location</string>
+    <string name="enter_the_name_of_the_city">Enter the name of the city</string>
+    <string name="search">Search</string>
+    <string name="background_image_that_show_weather">Background image that show weather</string>
+</resources>
