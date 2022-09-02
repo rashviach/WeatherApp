@@ -3,10 +3,13 @@ package com.android.e1ko0o.weatherapp.utils
 import android.Manifest
 import android.app.Activity
 import android.app.Activity.*
+import com.android.e1ko0o.weatherapp.R
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationManager
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.provider.Settings
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -19,7 +22,6 @@ class Location(private val activity: Activity) {
     val locationRequest: LocationRequest = LocationRequest.create().apply {
         interval = 30
         fastestInterval = 10
-        priority = LocationRequest.PRIORITY_BALANCED_POWER_ACCURACY
         maxWaitTime = 60
     }
     var locationCallback: LocationCallback = object : LocationCallback() {
@@ -33,31 +35,58 @@ class Location(private val activity: Activity) {
         }
     }
 
-    var longitude: Double = 0.0
-    var latitude: Double = 0.0
+    private var longitude: Double = 0.0
+    private var latitude: Double = 0.0
 
+    fun getLongitude(): Double = longitude
+    fun getLatitude(): Double = latitude
 
-    fun isGPSInternetEnabled() {
+    fun isNetworkEnabled(): Boolean {
+        val cm = activity.getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val capabilities = cm.getNetworkCapabilities(cm.activeNetwork)
+        if (capabilities != null) {
+            if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) {
+                return true
+            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI)) {
+                return true
+            } else if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET)) {
+                return true
+            } else {
+                AlertDialog.Builder(activity)
+                    .setMessage(activity.resources.getText(R.string.network_is_not_available))
+                    .setPositiveButton("Yes") { _, _ ->
+                        activity.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS))
+                    }
+                    .setNegativeButton("No", null)
+                    .show()
+                return true
+            }
+        }
+        return false
+
+    }
+
+    fun isGPSEnabled(): Boolean {
         val lm = activity.getSystemService(LOCATION_SERVICE) as LocationManager
-        val gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
-        val networkEnabled = lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
-
-        if (!gpsEnabled && !networkEnabled) {
+        var gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        if (!gpsEnabled) {
             AlertDialog.Builder(activity)
-                .setMessage("GPS or Internet isn't available. Turn on?")
+                .setMessage(activity.resources.getText(R.string.gps_is_not_available))
                 .setPositiveButton("Yes") { _, _ ->
                     activity.startActivity(Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS))
                 }
                 .setNegativeButton("No", null)
                 .show()
         }
+        gpsEnabled = lm.isProviderEnabled(LocationManager.GPS_PROVIDER)
+        return gpsEnabled
     }
 
     fun getLocation() {
         fusedLocationProvider.lastLocation
             .addOnSuccessListener { location: Location? ->
-                longitude = location?.longitude ?: 0.0
-                latitude = location?.latitude ?: 0.0
+                longitude = location?.longitude ?: -1.0
+                latitude = location?.latitude ?: -1.0
             }
     }
 

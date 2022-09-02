@@ -5,4 +5,8 @@
     <string name="enter_the_name_of_the_city">Enter the name of the city</string>
     <string name="search">Search</string>
     <string name="background_image_that_show_weather">Background image that show weather</string>
+    <string name="error_try_later">Something went wrong, please try later</string>
+    <string name="loading">Loading…</string>
+    <string name="network_is_not_available">Network is not available. Turn on?</string>
+    <string name="gps_is_not_available">GPS is not available. Turn on?</string>
 </resources>

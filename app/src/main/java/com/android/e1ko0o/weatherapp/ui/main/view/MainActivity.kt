@@ -46,44 +46,97 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         with(viewBinding) {
             btnSearch.setOnClickListener {
-                Toast.makeText(this@MainActivity, "SENDING REQUEST", Toast.LENGTH_SHORT).show()
 //                    TODO("get text from etCity and send request")
-                search()
+                searchCity()
             }
             btnUseLocation.setOnClickListener {
                 location.checkLocationPermission()
-                location.isGPSInternetEnabled()
-                location.getLocation()
-                Toast.makeText(this@MainActivity, "You're using now your location", Toast.LENGTH_SHORT).show()
-                search()
+                if (location.isNetworkEnabled() && location.isGPSEnabled()) {
+                    location.getLocation()
+                    searchGPS()
+                }
             }
         }
     }
 
-    private fun search() {
-        viewModel.getWeather(location.latitude, location.longitude, getKeyFromSharedPreferences(), "metric").observe(this) { response ->
+    private fun searchCity() {
+
+    }
+
+    private fun searchGPS() {
+        viewModel.getWeather(
+            location.getLatitude(),
+            location.getLongitude(),
+            getKeyFromSharedPreferences(),
+            "metric"
+        ).observe(this) { response ->
             response?.let { resource ->
                 when (resource.status) {
                     SUCCESS -> {
                         resource.data?.let {
-                            when(it.weather[0].main) {
-                                "Clear" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.clear, null))
-                                "Clouds" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.clouds, null))
-                                "Thunderstorm", "Extreme" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.thunderstorm, null))
-                                "Drizzle" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.drizzle, null))
-                                "Rain" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.rain, null))
-                                "Snow" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.snow, null))
-                                "Tornado" -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.tornado, null))
-                                else -> viewBinding.ivBackground.setImageDrawable(resources.getDrawable(R.mipmap.error, null))
+                            when (it.weather[0].main) {
+                                "Clear" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.clear,
+                                        null
+                                    )
+                                )
+                                "Clouds" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.clouds,
+                                        null
+                                    )
+                                )
+                                "Thunderstorm", "Extreme" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(R.mipmap.thunderstorm, null)
+                                )
+                                "Drizzle" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.drizzle,
+                                        null
+                                    )
+                                )
+                                "Rain" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.rain,
+                                        null
+                                    )
+                                )
+                                "Snow" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.snow,
+                                        null
+                                    )
+                                )
+                                "Tornado" -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.tornado,
+                                        null
+                                    )
+                                )
+                                else -> viewBinding.ivBackground.setImageDrawable(
+                                    resources.getDrawable(
+                                        R.mipmap.error,
+                                        null
+                                    )
+                                )
                             }
                         }
                     }
                     ERROR -> {
-                        Toast.makeText(this, response.message, Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this,
+                            resources.getText(R.string.error_try_later),
+                            Toast.LENGTH_LONG
+                        ).show()
                         Log.d("MY_TAG", response.message.toString())
                     }
                     LOADING -> {
-                        Toast.makeText(this, "Loading...", Toast.LENGTH_LONG).show()
+                        Toast.makeText(
+                            this,
+                            resources.getText(R.string.loading),
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             }
@@ -103,7 +156,8 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         return EncryptedSharedPreferences.create(
             applicationContext,
             ENCRYPTED_PREFS_FILE,
-            MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM).build(),
+            MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                .build(),
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
