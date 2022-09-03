@@ -20,13 +20,18 @@ import by.kirich1409.viewbindingdelegate.viewBinding
 import com.android.e1ko0o.weatherapp.R
 import com.android.e1ko0o.weatherapp.data.api.ApiHelper
 import com.android.e1ko0o.weatherapp.data.api.RetrofitBuilder
+import com.android.e1ko0o.weatherapp.data.model.Weather
 import com.android.e1ko0o.weatherapp.databinding.ActivityMainBinding
 import com.android.e1ko0o.weatherapp.ui.base.ViewModelFactory
 import com.android.e1ko0o.weatherapp.ui.main.viewmodel.MainViewModel
 import com.android.e1ko0o.weatherapp.utils.Location
+import com.android.e1ko0o.weatherapp.utils.Resource
 import com.android.e1ko0o.weatherapp.utils.Status.*
+import java.text.SimpleDateFormat
+import java.util.*
 
 private const val ENCRYPTED_PREFS_FILE = "encrypted_storage.txt"
+private const val UNITS_TYPE = "metric"
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private val viewBinding: ActivityMainBinding by viewBinding()
@@ -35,9 +40,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             this, ViewModelFactory(ApiHelper(RetrofitBuilder.apiService))
         )[MainViewModel::class.java]
     }
-
     private val sharedPrefs by lazy { createSharedPreferences() }
-
     private val location: Location by lazy { Location(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,8 +49,9 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
 
         with(viewBinding) {
             btnSearch.setOnClickListener {
-//                    TODO("get text from etCity and send request")
-                searchCity()
+                if (location.isNetworkEnabled()) {
+                    searchCity(etCity.text.toString())
+                }
             }
             btnUseLocation.setOnClickListener {
                 location.checkLocationPermission()
@@ -59,8 +63,12 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         }
     }
 
-    private fun searchCity() {
-
+    private fun searchCity(city: String) {
+        viewModel.getWeather(
+            city,
+            getKeyFromSharedPreferences(),
+            UNITS_TYPE
+        ).observe(this) { response -> handleResponse(response) }
     }
 
     private fun searchGPS() {
@@ -68,76 +76,89 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             location.getLatitude(),
             location.getLongitude(),
             getKeyFromSharedPreferences(),
-            "metric"
-        ).observe(this) { response ->
-            response?.let { resource ->
-                when (resource.status) {
-                    SUCCESS -> {
-                        resource.data?.let {
-                            when (it.weather[0].main) {
-                                "Clear" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.clear,
-                                        null
-                                    )
-                                )
-                                "Clouds" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.clouds,
-                                        null
-                                    )
-                                )
-                                "Thunderstorm", "Extreme" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(R.mipmap.thunderstorm, null)
-                                )
-                                "Drizzle" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.drizzle,
-                                        null
-                                    )
-                                )
-                                "Rain" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.rain,
-                                        null
-                                    )
-                                )
-                                "Snow" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.snow,
-                                        null
-                                    )
-                                )
-                                "Tornado" -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.tornado,
-                                        null
-                                    )
-                                )
-                                else -> viewBinding.ivBackground.setImageDrawable(
-                                    resources.getDrawable(
-                                        R.mipmap.error,
-                                        null
-                                    )
-                                )
-                            }
-                        }
+            UNITS_TYPE
+        ).observe(this) { response -> handleResponse(response) }
+    }
+
+    private fun handleMain(main: String) {
+        when (main) {
+            "Clear" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.clear,
+                    null
+                )
+            )
+            "Clouds" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.clouds,
+                    null
+                )
+            )
+            "Thunderstorm", "Extreme" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(R.mipmap.thunderstorm, null)
+            )
+            "Drizzle" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.drizzle,
+                    null
+                )
+            )
+            "Rain" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.rain,
+                    null
+                )
+            )
+            "Snow" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.snow,
+                    null
+                )
+            )
+            "Tornado" -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.tornado,
+                    null
+                )
+            )
+            else -> viewBinding.ivBackground.setImageDrawable(
+                resources.getDrawable(
+                    R.mipmap.error,
+                    null
+                )
+            )
+        }
+    }
+//TODO finish (watch labels)
+    private fun handleLastUpdateTime(value: Long) {
+        val date = Date(value)
+        val format = SimpleDateFormat("yyyy.MM.dd HH:mm:ss")
+        viewBinding.tvTimeValue.text = format.format(date)
+    }
+
+    private fun handleResponse(response: Resource<Weather>) {
+        response.let { resource ->
+            when (resource.status) {
+                SUCCESS -> {
+                    resource.data?.let {
+                        handleMain(it.weather[0].main)
+                        handleLastUpdateTime(it.dt)
                     }
-                    ERROR -> {
-                        Toast.makeText(
-                            this,
-                            resources.getText(R.string.error_try_later),
-                            Toast.LENGTH_LONG
-                        ).show()
-                        Log.d("MY_TAG", response.message.toString())
-                    }
-                    LOADING -> {
-                        Toast.makeText(
-                            this,
-                            resources.getText(R.string.loading),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                }
+                ERROR -> {
+                    Toast.makeText(
+                        this,
+                        resources.getText(R.string.error_try_later),
+                        Toast.LENGTH_LONG
+                    ).show()
+                    Log.e("MY_TAG", response.message.toString())
+                }
+                LOADING -> {
+                    Toast.makeText(
+                        this,
+                        resources.getText(R.string.loading),
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }

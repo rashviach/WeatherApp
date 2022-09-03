@@ -17,4 +17,14 @@ class MainViewModel(private val mainRepository: MainRepository) : ViewModel() {
             }
         }
 
+    fun getWeather(city: String, appid: String, units: String) =
+        liveData(Dispatchers.IO) {
+            emit(Resource.loading(data = null))
+            try {
+                emit(Resource.success(data = mainRepository.getWeather(city, appid, units)))
+            } catch (exception: Exception) {
+                emit(Resource.error(data = null, message = exception.message ?: "Error Occurred!"))
+            }
+        }
+
 }

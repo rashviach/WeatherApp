@@ -9,4 +9,8 @@
     <string name="loading">Loading…</string>
     <string name="network_is_not_available">Network is not available. Turn on?</string>
     <string name="gps_is_not_available">GPS is not available. Turn on?</string>
+    <string name="temperature">Temperature:</string>
+    <string name="pressure">Pressure:</string>
+    <string name="wind">Wind:</string>
+    <string name="last_update_time">Last update time</string>
 </resources>
