@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.util.Log
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -24,14 +25,12 @@ import com.android.e1ko0o.weatherapp.data.model.Weather
 import com.android.e1ko0o.weatherapp.databinding.ActivityMainBinding
 import com.android.e1ko0o.weatherapp.ui.base.ViewModelFactory
 import com.android.e1ko0o.weatherapp.ui.main.viewmodel.MainViewModel
+import com.android.e1ko0o.weatherapp.utils.Constant
 import com.android.e1ko0o.weatherapp.utils.Location
 import com.android.e1ko0o.weatherapp.utils.Resource
 import com.android.e1ko0o.weatherapp.utils.Status.*
 import java.text.SimpleDateFormat
 import java.util.*
-
-private const val ENCRYPTED_PREFS_FILE = "encrypted_storage.txt"
-private const val UNITS_TYPE = "metric"
 
 class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private val viewBinding: ActivityMainBinding by viewBinding()
@@ -42,23 +41,22 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     }
     private val sharedPrefs by lazy { createSharedPreferences() }
     private val location: Location by lazy { Location(this) }
+    private val usedUnits = Constant.UNITS_TYPE_METRIC
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         putKeyInSharedPreferences()
+        location.observeLastLocation()
 
-        with(viewBinding) {
-            btnSearch.setOnClickListener {
-                if (location.isNetworkEnabled()) {
-                    searchCity(etCity.text.toString())
-                }
+        viewBinding.btnSearch.setOnClickListener {
+            if (location.isNetworkEnabled()) {
+                searchCity(viewBinding.etCity.text.toString())
             }
-            btnUseLocation.setOnClickListener {
-                location.checkLocationPermission()
-                if (location.isNetworkEnabled() && location.isGPSEnabled()) {
-                    location.getLocation()
-                    searchGPS()
-                }
+        }
+        viewBinding.btnUseLocation.setOnClickListener {
+            location.checkLocationPermission()
+            if (location.isNetworkEnabled() && location.isGPSEnabled()) {
+                searchGPS()
             }
         }
     }
@@ -67,7 +65,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
         viewModel.getWeather(
             city,
             getKeyFromSharedPreferences(),
-            UNITS_TYPE
+            usedUnits
         ).observe(this) { response -> handleResponse(response) }
     }
 
@@ -76,7 +74,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             location.getLatitude(),
             location.getLongitude(),
             getKeyFromSharedPreferences(),
-            UNITS_TYPE
+            usedUnits
         ).observe(this) { response -> handleResponse(response) }
     }
 
@@ -129,11 +127,43 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
             )
         }
     }
-//TODO finish (watch labels)
-    private fun handleLastUpdateTime(value: Long) {
-        val date = Date(value)
-        val format = SimpleDateFormat("yyyy.MM.dd HH:mm:ss")
-        viewBinding.tvTimeValue.text = format.format(date)
+
+    private fun handleTemp(value: Double) {
+        val unit = when (usedUnits) {
+            Constant.UNITS_TYPE_METRIC -> "C"
+            Constant.UNITS_TYPE_IMPERIAL -> "F"
+            else -> "K"
+        }
+        viewBinding.tvTempValue.text = "$value $unit"
+        viewBinding.tvTempValue.visibility = View.VISIBLE
+        viewBinding.tvTempLabel.visibility = View.VISIBLE
+    }
+
+    private fun converthPaTommHg(hPa: Double): Double {
+        return hPa * 0.75006157584566
+    }
+
+    private fun handlePressure(value: Double) {
+        viewBinding.tvPressureValue.text = "${converthPaTommHg(value).toInt()} mm Hg"
+        viewBinding.tvPressureValue.visibility = View.VISIBLE
+        viewBinding.tvPressureLabel.visibility = View.VISIBLE
+    }
+
+    private fun handleWind(value: Double) {
+        val unit = when(usedUnits) {
+            Constant.UNITS_TYPE_METRIC -> "meter/sec"
+            Constant.UNITS_TYPE_IMPERIAL -> "miles/hour"
+            else -> "meter/sec"
+        }
+        viewBinding.tvWindValue.text = "$value $unit"
+        viewBinding.tvWindValue.visibility = View.VISIBLE
+        viewBinding.tvWindLabel.visibility = View.VISIBLE
+    }
+
+    private fun handleLastUpdateTime() {
+        viewBinding.tvTimeValue.text = SimpleDateFormat("HH:mm:ss").format(Calendar.getInstance().time)
+        viewBinding.tvTimeValue.visibility = View.VISIBLE
+        viewBinding.tvTimeLabel.visibility = View.VISIBLE
     }
 
     private fun handleResponse(response: Resource<Weather>) {
@@ -142,7 +172,10 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
                 SUCCESS -> {
                     resource.data?.let {
                         handleMain(it.weather[0].main)
-                        handleLastUpdateTime(it.dt)
+                        handleTemp(it.main.temp)
+                        handlePressure(it.main.pressure)
+                        handleWind(it.wind.speed)
+                        handleLastUpdateTime()
                     }
                 }
                 ERROR -> {
@@ -176,7 +209,7 @@ class MainActivity : AppCompatActivity(R.layout.activity_main) {
     private fun createSharedPreferences(): SharedPreferences {
         return EncryptedSharedPreferences.create(
             applicationContext,
-            ENCRYPTED_PREFS_FILE,
+            Constant.ENCRYPTED_PREFS_FILE,
             MasterKey.Builder(applicationContext).setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build(),
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,

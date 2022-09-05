@@ -82,7 +82,7 @@ class Location(private val activity: Activity) {
         return gpsEnabled
     }
 
-    fun getLocation() {
+    fun observeLastLocation() {
         fusedLocationProvider.lastLocation
             .addOnSuccessListener { location: Location? ->
                 longitude = location?.longitude ?: -1.0
